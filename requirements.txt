@@ -1,0 +1,16 @@
+playwright
+beautifulsoup4
+praw
+pandas
+spacy
+sentence-transformers
+transformers
+torch
+scikit-learn
+nltk
+textblob
+streamlit
+plotly
+sqlalchemy
+python-dotenv
+pytest
