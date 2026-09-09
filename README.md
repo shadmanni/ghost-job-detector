@@ -117,6 +117,15 @@ GitHub Pages provides free, zero-config static hosting directly inside this repo
 - **Vercel**: Import your repository, select **Other** project type, and set the Output Directory to `seo/build/`.
 - **Cloudflare Pages**: Direct upload or connect Git repository with build output `seo/build/`.
 
+## GA4 Telemetry & Pilot Validation Note
+
+The Streamlit dashboard features a dedicated **GA4 Traffic Telemetry** tab wired to query the GA4 Reporting Data API and local `PageAnalytics` cache table. 
+
+> [!NOTE]
+> **Pilot Validation Expectation**: GA4 web traffic telemetry requires the SEO transparency report site to be deployed live to web hosting (e.g. GitHub Pages) and indexed by search engines for at least **2–3 weeks** before organic candidate search traffic and engagement metrics accumulate. 
+> 
+> Until live indexing occurs, displaying empty states or initial benchmark data is the expected behavior, not a bug, and is framed as a **pilot validation** phase for system evaluation per the project plan.
+
 ## Legal & Ethical Notes
 
 1. **Public Data Scope Only**: The data collection pipeline strictly scrapes publicly available job posting metadata (job titles, descriptions, salary ranges, and posting dates) published on corporate career pages and public job indices. No private or password-protected content is accessed.

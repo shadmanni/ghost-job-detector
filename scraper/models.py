@@ -66,6 +66,20 @@ class CompanySentiment(Base):
         return f"<CompanySentiment(company='{self.company}', score={self.score}, review_count={self.review_count})>"
 
 
+class PageAnalytics(Base):
+    __tablename__ = "page_analytics"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company = Column(String(255), nullable=False, index=True)
+    pageviews = Column(Integer, default=0, nullable=False)
+    avg_time_on_page = Column(Float, default=0.0, nullable=False)
+    bounce_rate = Column(Float, default=0.0, nullable=False)
+    fetched_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<PageAnalytics(company='{self.company}', pageviews={self.pageviews}, bounce_rate={self.bounce_rate})>"
+
+
 class GhostScore(Base):
     __tablename__ = "ghost_scores"
 

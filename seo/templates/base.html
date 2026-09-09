@@ -7,6 +7,17 @@
     <title>{% block title %}Ghost Job Detector | Hiring Transparency Reports{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}Open data and transparent metrics on phantom job postings and hiring practices.{% endblock %}">
     {% endblock %}
+
+    {% if ga4_measurement_id %}
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga4_measurement_id }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{{ ga4_measurement_id }}');
+    </script>
+    {% endif %}
     
     <style>
         :root {

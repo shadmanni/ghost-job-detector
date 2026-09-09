@@ -183,6 +183,10 @@ def build_site(
         # Sort descending by score
         filtered_companies.sort(key=lambda x: x["ghost_score"], reverse=True)
 
+        ga4_measurement_id = os.getenv("GA4_MEASUREMENT_ID")
+        if ga4_measurement_id and "your_" in ga4_measurement_id.lower():
+            ga4_measurement_id = None
+
         generated_files = []
 
         # 1. Render Company Report Pages
@@ -201,6 +205,7 @@ def build_site(
                 complaint_themes=complaints,
                 repost_score=score_obj.repost_score or 0.0,
                 json_ld_script=json_ld,
+                ga4_measurement_id=ga4_measurement_id,
             )
 
             file_path = os.path.join(company_out_dir, f"{comp_info['slug']}.html")
@@ -211,7 +216,10 @@ def build_site(
             logger.info(f"Generated company report: {file_path} (Score: {comp_info['ghost_score']})")
 
         # 2. Render Directory Index Page
-        index_html = index_template.render(reports=filtered_companies)
+        index_html = index_template.render(
+            reports=filtered_companies,
+            ga4_measurement_id=ga4_measurement_id,
+        )
         index_path = os.path.join(out_dir, "index.html")
         with open(index_path, "w", encoding="utf-8") as f:
             f.write(index_html)

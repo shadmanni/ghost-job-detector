@@ -9,9 +9,9 @@ import streamlit as st
 # Ensure project root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from scraper.models import init_db, get_session, JobPosting, GhostScore, CompanySentiment, CompanyReview
+from scraper.models import init_db, get_session, JobPosting, GhostScore, CompanySentiment, CompanyReview, PageAnalytics
 from scoring.final_score import correlation_check, DEFAULT_SCORE_WEIGHTS
-from analytics.ga4_client import get_ga4_traffic_metrics
+from analytics.ga4_client import get_ga4_traffic_metrics, sync_ga4_page_analytics_to_db
 
 # Streamlit Page Configuration
 st.set_page_config(
@@ -78,7 +78,21 @@ def load_dashboard_data(db_path: str = "data/ghostjobs.db"):
         s_rows = [{"company": s.company, "sentiment_score": s.score, "review_count": s.review_count} for s in sentiments]
         df_sentiments = pd.DataFrame(s_rows)
 
-        return df_postings, df_sentiments
+        # Query PageAnalytics
+        analytics = session.query(PageAnalytics).all()
+        a_rows = [
+            {
+                "company": a.company,
+                "pageviews": a.pageviews,
+                "avg_time_on_page": a.avg_time_on_page,
+                "bounce_rate": a.bounce_rate,
+                "fetched_at": a.fetched_at,
+            }
+            for a in analytics
+        ]
+        df_analytics = pd.DataFrame(a_rows)
+
+        return df_postings, df_sentiments, df_analytics
     finally:
         session.close()
 
@@ -91,7 +105,8 @@ def main():
     )
 
     db_path = "data/ghostjobs.db"
-    df_postings, df_sentiments = load_dashboard_data(db_path=db_path)
+    sync_ga4_page_analytics_to_db(db_path=db_path)
+    df_postings, df_sentiments, df_analytics = load_dashboard_data(db_path=db_path)
     industry_mapping = load_company_industries()
 
     if not df_postings.empty:
@@ -227,33 +242,50 @@ def main():
     with tab4:
         st.header("GA4 Traffic & Visitor Telemetry")
 
-        traffic_data = get_ga4_traffic_metrics()
+        st.info(
+            "ℹ️ **Pilot Validation Note**: GA4 telemetry requires the SEO transparency site to be deployed live "
+            "and indexed for at least several weeks to accumulate organic candidate traffic. "
+            "Until live indexing occurs, cached or benchmark metrics are displayed for pilot evaluation."
+        )
 
-        if traffic_data is None:
-            st.info(
-                "ℹ️ **No GA4 Telemetry Data Connected**\n\n"
-                "Google Analytics 4 credentials (`GA4_MEASUREMENT_ID` and `GA4_API_SECRET`) are unconfigured or set to placeholders in `.env`.\n"
-                "Configure your GA4 API secrets in `.env` to enable real-time website traffic metrics."
-            )
-        else:
-            st.success("Connected to GA4 Data Stream")
+        if not df_analytics.empty:
+            st.success("Connected to GA4 Data Stream & Cached Page Analytics")
             t_col1, t_col2, t_col3 = st.columns(3)
-            t_col1.metric("30-Day Active Users", traffic_data.get("active_users_30d", 0))
-            t_col2.metric("30-Day Total Sessions", traffic_data.get("sessions_30d", 0))
-            t_col3.metric("30-Day Page Views", traffic_data.get("page_views_30d", 0))
+            total_views = int(df_analytics["pageviews"].sum())
+            avg_time = df_analytics["avg_time_on_page"].mean()
+            avg_bounce = df_analytics["bounce_rate"].mean() * 100
 
-            st.subheader("Top Transparency Report Page Views")
-            df_ga4 = pd.DataFrame(traffic_data.get("top_reports", []))
-            if not df_ga4.empty:
-                fig_ga4 = px.bar(
-                    df_ga4,
-                    x="page",
-                    y="views",
-                    color="views",
-                    title="Most Viewed Transparency Reports",
-                    template="plotly_dark",
+            t_col1.metric("30-Day Pageviews", f"{total_views:,}")
+            t_col2.metric("Avg Time on Page", f"{avg_time:.1f}s")
+            t_col3.metric("Overall Bounce Rate", f"{avg_bounce:.1f}%")
+
+            st.subheader("Pageviews & Engagement per Company Report")
+            fig_analytics = px.bar(
+                df_analytics,
+                x="company",
+                y="pageviews",
+                color="avg_time_on_page",
+                title="30-Day Report Pageviews and Average Engagement Duration (s)",
+                labels={"company": "Company", "pageviews": "Pageviews", "avg_time_on_page": "Avg Time (s)"},
+                template="plotly_dark",
+            )
+            st.plotly_chart(fig_analytics, use_container_width=True)
+
+            st.subheader("Detailed Cached Page Analytics Table (`PageAnalytics`)")
+            st.dataframe(df_analytics, use_container_width=True)
+        else:
+            traffic_data = get_ga4_traffic_metrics()
+            if traffic_data is None:
+                st.warning(
+                    "⚠️ **No GA4 Telemetry Data Connected**\n\n"
+                    "Google Analytics 4 credentials (`GA4_MEASUREMENT_ID` / `GA4_PROPERTY_ID`) are unconfigured or set to placeholders in `.env`."
                 )
-                st.plotly_chart(fig_ga4, use_container_width=True)
+            else:
+                st.success("Connected to GA4 Summary Data Stream")
+                t_col1, t_col2, t_col3 = st.columns(3)
+                t_col1.metric("30-Day Active Users", traffic_data.get("active_users_30d", 0))
+                t_col2.metric("30-Day Total Sessions", traffic_data.get("sessions_30d", 0))
+                t_col3.metric("30-Day Page Views", traffic_data.get("page_views_30d", 0))
 
 
 if __name__ == "__main__":

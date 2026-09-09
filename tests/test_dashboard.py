@@ -86,7 +86,7 @@ def test_load_dashboard_data(tmp_path):
     finally:
         session.close()
 
-    df_postings, df_sentiments = load_dashboard_data(db_path)
+    df_postings, df_sentiments, df_analytics = load_dashboard_data(db_path)
     assert not df_postings.empty
     assert len(df_postings) == 1
     assert df_postings.iloc[0]["company"] == "TestCorp"
