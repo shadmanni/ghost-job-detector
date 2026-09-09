@@ -63,11 +63,14 @@ def test_indeed_scraper_offline(indeed_html):
     assert data_job["company"] == "DataSystems Inc"
 
 
-def test_respect_robots_txt_logic():
+def test_respect_robots_txt_logic(mocker=None):
     """Verify that robots.txt checking function returns boolean gracefully."""
-    # Test valid accessible URL
-    result = respect_robots_txt("https://www.example.com/page")
-    assert isinstance(result, bool)
+    from unittest.mock import patch
+    with patch("urllib.robotparser.RobotFileParser.read"):
+        with patch("urllib.robotparser.RobotFileParser.can_fetch", return_value=True):
+            result = respect_robots_txt("https://www.example.com/page")
+            assert isinstance(result, bool)
+            assert result is True
 
 
 def test_save_postings_repost_deduplication(tmp_path):
