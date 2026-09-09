@@ -1,4 +1,4 @@
-# 👻 Ghost Job Detector
+# Ghost Job Detector
 
 **Ghost Job Detector** is an end-to-end data analytics, NLP, and machine learning system designed to identify non-viable, phantom, or stagnant job listings ("ghost jobs") across public job boards and community forums. 
 
