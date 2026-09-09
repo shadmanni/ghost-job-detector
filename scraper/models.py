@@ -53,6 +53,19 @@ class CompanyReview(Base):
         return f"<CompanyReview(id={self.id}, company='{self.company}', source='{self.source}')>"
 
 
+class CompanySentiment(Base):
+    __tablename__ = "company_sentiments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company = Column(String(255), nullable=False, index=True)
+    score = Column(Float, nullable=False)
+    review_count = Column(Integer, default=0, nullable=False)
+    computed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<CompanySentiment(company='{self.company}', score={self.score}, review_count={self.review_count})>"
+
+
 class GhostScore(Base):
     __tablename__ = "ghost_scores"
 

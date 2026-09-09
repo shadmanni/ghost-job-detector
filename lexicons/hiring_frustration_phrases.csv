@@ -1,0 +1,26 @@
+phrase,weight
+never heard back,0.85
+ghosted after,0.95
+interviewed for a job that didn't exist,1.00
+position was already filled,0.90
+no response after final round,0.95
+fake job posting,1.00
+waste of time,0.80
+radio silence,0.85
+phantom listing,0.95
+never replied,0.80
+job wasn't real,1.00
+no response from recruiter,0.75
+automatic rejection email,0.60
+listing posted again,0.85
+reposted the exact same role,0.90
+endless interview rounds,0.75
+unresponsive HR,0.80
+misleading job description,0.85
+no intention of hiring,0.95
+resume harvesting,0.95
+data collection posting,0.90
+applied 3 months ago,0.70
+ghosted by recruiter,0.90
+cancelled the position,0.75
+cold rejection,0.70
