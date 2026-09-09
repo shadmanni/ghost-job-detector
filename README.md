@@ -6,7 +6,12 @@ Ghost Job Detector is an end-to-end data analytics and NLP system designed to id
 
 ```text
 ghost-job-detector/
-├── scraper/           # Job board, Glassdoor, and Reddit web scraping & ORM models
+├── config/            # Target company lists and scraper parameters
+│   └── target_companies.yaml
+├── scraper/           # Web scraping engine, robots.txt checker, and ORM models
+│   ├── jobboards.py
+│   ├── models.py
+│   └── run.py
 ├── preprocessing/     # Text cleaning, normalization, and metadata extraction
 ├── nlp/               # Ghost-signal feature extraction & Transformer/BERT classifier
 ├── sentiment/         # VADER sentiment analysis & custom frustration lexicon
@@ -17,9 +22,11 @@ ghost-job-detector/
 ├── data/              # SQLite database storage & raw/processed data folders (gitignored)
 │   ├── raw/
 │   └── processed/
-├── tests/             # Automated test suite
+├── tests/             # Automated test suite & HTML fixtures
+│   ├── fixtures/
+│   └── test_jobboards.py
 ├── .github/
-│   └── workflows/     # GitHub Actions workflow specifications for scheduled scraping
+│   └── workflows/     # Scheduled data collection workflows
 ├── README.md          # Project documentation and setup guide
 ├── requirements.txt   # Python project dependencies
 ├── .env.example       # Template for API keys and configuration settings
@@ -45,7 +52,7 @@ pip install -r requirements.txt
 
 ### 4. Install Playwright Browsers & spaCy Language Model
 ```bash
-playwright install
+playwright install chromium
 python -m spacy download en_core_web_sm
 ```
 
@@ -55,14 +62,21 @@ Copy the `.env.example` file to `.env` and fill in your API credentials:
 cp .env.example .env
 ```
 
-### 6. Initialize Database
-Initialize the SQLite database schema (`data/ghostjobs.db`):
+### 6. Initialize Database & Run Scraper CLI
 ```bash
 python -c "from scraper import init_db; init_db()"
+python scraper/run.py --config config/target_companies.yaml
 ```
 
 ### 7. Run Tests
-Validate the scaffolding setup:
+Validate the test suite using saved HTML fixtures:
 ```bash
 pytest tests/
 ```
+
+## Legal & Ethical Notes
+
+1. **Public Data Scope Only**: The data collection pipeline strictly scrapes publicly available job posting metadata (job titles, descriptions, salary ranges, and posting dates) published on corporate career pages and public job indices. No private or password-protected content is accessed.
+2. **Programmatic `robots.txt` Compliance**: All automated scraping requests check target site `robots.txt` rules using `urllib.robotparser.RobotFileParser`. Any URL path explicitly disallowed by site directives is automatically skipped.
+3. **Rate Limiting & Server Politeness**: Scrapers implement random delays (2–5 seconds) between network requests and use realistic, transparent User-Agent headers to ensure minimal load on host web servers.
+4. **No Storage of Candidate Data**: Ghost Job Detector is purely focused on corporate job postings and institutional transparency. The application does not collect, track, process, or store any personal candidate data, applicant resumes, or individual user identities.

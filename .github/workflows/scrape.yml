@@ -1,0 +1,57 @@
+# GitHub Actions Workflow for Scheduled Job Scraping
+#
+# ARCHITECTURAL TRADEOFF NOTE REGARDING SQLITE PERSISTENCE IN CI:
+# ----------------------------------------------------------------------------------
+# SQLite creates a local file database ('data/ghostjobs.db'). Because GitHub Actions
+# runners run in isolated ephemeral virtual environments, any changes made to 'data/ghostjobs.db'
+# during workflow execution will be lost when the runner terminates.
+#
+# To persist scraped data across CI runs, you can either:
+# 1. Commit and push the updated 'data/ghostjobs.db' file back to a dedicated 'data' branch in Git.
+# 2. Upload 'data/ghostjobs.db' as a GitHub Actions artifact (or to S3/Cloud Storage).
+# 3. (Recommended for Production) Transition SQLite to a hosted database (e.g., PostgreSQL / Supabase)
+#    and supply a DATABASE_URL secret.
+# ----------------------------------------------------------------------------------
+
+name: Scheduled Data Collection Scraper
+
+on:
+  schedule:
+    # Run every 2 days at 00:00 UTC
+    - cron: '0 0 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  scrape-and-deduplicate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+          python -m spacy download en_core_web_sm
+
+      - name: Run Scraper CLI Pipeline
+        env:
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+        run: |
+          python scraper/run.py --config config/target_companies.yaml --db-path data/ghostjobs.db
+
+      - name: Upload SQLite Database Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostjobs-db
+          path: data/ghostjobs.db
+          retention-days: 30
