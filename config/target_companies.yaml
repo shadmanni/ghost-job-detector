@@ -1,25 +1,30 @@
 companies:
   - name: "Anthropic"
+    industry: "Artificial Intelligence"
     career_url: "https://www.anthropic.com/careers"
     query: "Software Engineer"
     location: "San Francisco, CA"
 
   - name: "OpenAI"
+    industry: "Artificial Intelligence"
     career_url: "https://openai.com/careers"
     query: "Research Scientist"
     location: "San Francisco, CA"
 
   - name: "Stripe"
+    industry: "Fintech"
     career_url: "https://stripe.com/jobs"
     query: "Backend Engineer"
     location: "Remote"
 
   - name: "Airbnb"
+    industry: "Travel & Hospitality"
     career_url: "https://careers.airbnb.com"
     query: "Data Scientist"
     location: "San Francisco, CA"
 
   - name: "Databricks"
+    industry: "Cloud & Data Analytics"
     career_url: "https://www.databricks.com/company/careers"
     query: "Software Engineer"
     location: "San Francisco, CA"
