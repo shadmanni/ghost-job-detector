@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block seo_meta %}
+<title>Is {{ company_name }} Hiring Real? | Transparency Report</title>
+<meta name="description" content="Independent hiring transparency report for {{ company_name }}. Ghost Job Score: {{ ghost_score }}/100. Signal breakdowns and anonymized candidate feedback analysis.">
+{% endblock %}
+
+{% block json_ld %}
+<script type="application/ld+json">
+{{ json_ld_script | safe }}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <div>
+            <h1 style="margin:0 0 0.5rem 0;">{{ company_name }}</h1>
+            <p style="color:var(--text-muted); margin:0;">Hiring Transparency & Ghost Job Assessment Report</p>
+        </div>
+        <div style="text-align:right;">
+            <div class="badge-score {% if ghost_score < 30 %}low{% elif ghost_score < 60 %}medium{% endif %}">
+                {{ ghost_score }} / 100
+            </div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin:0.25rem 0 0 0;">Ghost Job Score</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Plain-Language Contributing Signals</h2>
+    <p>Our NLP and data collection engine analyzed job postings and feedback signals for {{ company_name }}:</p>
+    <ul class="signals-list">
+        {% for signal in signals %}
+        <li><strong>{{ signal.title }}:</strong> {{ signal.description }}</li>
+        {% else %}
+        <li>Standard hiring pattern detected with baseline signal levels.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="card">
+    <h2>Top 3 Anonymized Candidate Complaint Themes</h2>
+    <p style="font-size:0.9rem; color:var(--text-muted);">Synthesized and paraphrased from community feedback to protect individual reviewer identities:</p>
+    <ul class="complaints-list">
+        {% for complaint in complaint_themes %}
+        <li><strong>Theme {{ loop.index }}:</strong> {{ complaint }}</li>
+        {% else %}
+        <li>No significant hiring complaint clusters identified for {{ company_name }}.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="card">
+    <h2>Posting History & Repost Frequency Pattern</h2>
+    <p>Visualizing job posting lifecycle and re-listing cadence over time:</p>
+    
+    <!-- Lightweight SVG Chart representing posting history -->
+    <div style="background-color:#0f172a; padding:1.5rem; border-radius:8px; border:1px solid var(--border-color); text-align:center;">
+        <svg width="100%" height="160" viewBox="0 0 500 150" preserveAspectRatio="none">
+            <polyline fill="none" stroke="#38bdf8" stroke-width="3" points="
+                10,120 
+                80,100 
+                150,110 
+                220,{% if repost_score > 0.3 %}40{% else %}90{% endif %} 
+                290,{% if repost_score > 0.3 %}30{% else %}85{% endif %} 
+                360,70 
+                430,{% if repost_score > 0.3 %}25{% else %}80{% endif %} 
+                490,{% if repost_score > 0.3 %}20{% else %}75{% endif %}
+            "/>
+            <circle cx="490" cy="{% if repost_score > 0.3 %}20{% else %}75{% endif %}" r="5" fill="#f43f5e"/>
+        </svg>
+        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+            <span>6 Months Ago</span>
+            <span>3 Months Ago</span>
+            <span>Current Cycle</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

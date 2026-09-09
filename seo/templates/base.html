@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block seo_meta %}
+    <title>{% block title %}Ghost Job Detector | Hiring Transparency Reports{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Open data and transparent metrics on phantom job postings and hiring practices.{% endblock %}">
+    {% endblock %}
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-color: #38bdf8;
+            --warning-color: #f43f5e;
+            --border-color: #334155;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        header {
+            background-color: #020617;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .badge-score {
+            display: inline-block;
+            background-color: #e11d48;
+            color: white;
+            font-weight: bold;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 1.5rem;
+        }
+        .badge-score.low {
+            background-color: #10b981;
+        }
+        .badge-score.medium {
+            background-color: #f59e0b;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            margin-top: 4rem;
+            font-size: 0.875rem;
+        }
+        ul.signals-list, ul.complaints-list {
+            padding-left: 1.25rem;
+        }
+        li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+    {% block json_ld %}{% endblock %}
+</head>
+<body>
+    <header>
+        <a href="../index.html">👻 Ghost Job Detector</a>
+        <nav>
+            <a href="../index.html" style="font-size:0.95rem;">All Transparency Reports</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; Ghost Job Detector. Public Hiring Transparency Initiative. Powered by Open Data & NLP Analysis.</p>
+    </footer>
+</body>
+</html>

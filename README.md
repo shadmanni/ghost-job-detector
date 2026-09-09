@@ -13,18 +13,29 @@ ghost-job-detector/
 │   ├── models.py
 │   └── run.py
 ├── preprocessing/     # Text cleaning, normalization, and metadata extraction
+│   ├── clean.py
+│   └── run.py
 ├── nlp/               # Ghost-signal feature extraction & Transformer/BERT classifier
+│   ├── classifier.py
+│   ├── evaluate.py
+│   └── features.py
 ├── sentiment/         # VADER sentiment analysis & custom frustration lexicon
+│   ├── analyze.py
+│   └── run.py
 ├── scoring/           # Multi-factor scoring engine combining NLP & sentiment metrics
-├── seo/               # Static transparency website generator
+│   ├── final_score.py
+│   └── run.py
+├── seo/               # Static transparency site generator & Jinja2 templates
+│   ├── build/
+│   ├── templates/
+│   └── build.py
+├── lexicons/          # Phrase lexicons and weighted sentiment CSVs
 ├── dashboard/         # Streamlit web application & interactive visualizations
 ├── analytics/         # GA4 tracking and telemetry integration
 ├── data/              # SQLite database storage & raw/processed data folders (gitignored)
 │   ├── raw/
 │   └── processed/
 ├── tests/             # Automated test suite & HTML fixtures
-│   ├── fixtures/
-│   └── test_jobboards.py
 ├── .github/
 │   └── workflows/     # Scheduled data collection workflows
 ├── README.md          # Project documentation and setup guide
@@ -62,17 +73,49 @@ Copy the `.env.example` file to `.env` and fill in your API credentials:
 cp .env.example .env
 ```
 
-### 6. Initialize Database & Run Scraper CLI
+### 6. Pipeline Execution Sequence
 ```bash
+# 1. Initialize Database & Run Job Board Scraper
 python -c "from scraper import init_db; init_db()"
 python scraper/run.py --config config/target_companies.yaml
+
+# 2. Run Review Scraper (PRAW Reddit)
+python scraper/run_reviews.py --config config/target_companies.yaml
+
+# 3. Clean Text & Extract Metadata
+python preprocessing/run.py
+
+# 4. Run Sentiment Analysis
+python sentiment/run.py
+
+# 5. Compute Final Ghost Scores & Correlation Check
+python scoring/run.py
+
+# 6. Generate Static SEO Transparency Site
+python seo/build.py --threshold 60
 ```
 
-### 7. Run Tests
-Validate the test suite using saved HTML fixtures:
+### 7. Run Test Suite
+Validate all 28 unit tests across project test suites:
 ```bash
 pytest tests/
 ```
+
+## Static Site Deployment Guide (GitHub Pages / Netlify / Vercel)
+
+The static transparency site generated in `seo/build/` is completely self-contained HTML/CSS.
+
+### Default Deployment Option: GitHub Pages (Recommended)
+GitHub Pages provides free, zero-config static hosting directly inside this repository:
+1. In your GitHub Repository, navigate to **Settings** -> **Pages**.
+2. Under **Build and deployment** -> **Source**, select **Deploy from a branch**.
+3. Choose the `main` (or `gh-pages`) branch and set the folder to `/seo/build` (or set up a GitHub Action to deploy `seo/build/`).
+4. Save settings. Your site will be published live at `https://<user>.github.io/ghost-job-detector/`.
+
+### Alternative Deployment Options
+- **Netlify**: Connect your GitHub repository, set the Publish Directory to `seo/build/`, and set the build command to `python seo/build.py`.
+- **Vercel**: Import your repository, select **Other** project type, and set the Output Directory to `seo/build/`.
+- **Cloudflare Pages**: Direct upload or connect Git repository with build output `seo/build/`.
 
 ## Legal & Ethical Notes
 
