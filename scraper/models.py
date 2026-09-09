@@ -28,6 +28,7 @@ class JobPosting(Base):
     posted_date = Column(DateTime, nullable=True)
     scraped_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     salary_listed = Column(String(255), nullable=True)
+    cleaned_text = Column(Text, nullable=True)
     repost_of_id = Column(Integer, ForeignKey("job_postings.id"), nullable=True)
 
     # Relationships
@@ -85,6 +86,18 @@ def get_db_engine(db_path: str = "data/ghostjobs.db"):
 def init_db(db_path: str = "data/ghostjobs.db"):
     engine = get_db_engine(db_path)
     Base.metadata.create_all(bind=engine)
+
+    # Dynamic migration check for existing SQLite databases
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "job_postings" in inspector.get_table_names():
+        columns = [c["name"] for c in inspector.get_columns("job_postings")]
+        if "cleaned_text" not in columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE job_postings ADD COLUMN cleaned_text TEXT"))
+                conn.commit()
+
     return engine
 
 
