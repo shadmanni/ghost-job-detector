@@ -10,10 +10,13 @@ from typing import Dict, Any, List, Optional
 # Ensure project root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import Session
 from scraper.models import init_db, get_session, JobPosting, GhostScore, CompanyReview, CompanySentiment
 from sentiment.analyze import company_sentiment_score
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
