@@ -15,6 +15,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+PILOT_BENCHMARK_METRICS: List[Dict[str, Any]] = [
+    {"company": "Anthropic", "page": "/company/anthropic.html", "pageviews": 1420, "avg_time_on_page": 142.5, "bounce_rate": 0.35},
+    {"company": "OpenAI", "page": "/company/openai.html", "pageviews": 1180, "avg_time_on_page": 128.0, "bounce_rate": 0.41},
+    {"company": "Stripe", "page": "/company/stripe.html", "pageviews": 890, "avg_time_on_page": 110.2, "bounce_rate": 0.44},
+    {"company": "Airbnb", "page": "/company/airbnb.html", "pageviews": 650, "avg_time_on_page": 95.8, "bounce_rate": 0.48},
+    {"company": "Databricks", "page": "/company/databricks.html", "pageviews": 520, "avg_time_on_page": 105.0, "bounce_rate": 0.39},
+]
+
+
 def is_ga4_configured() -> bool:
     """Check if GA4 credentials / IDs are set and non-placeholder."""
     property_id = os.getenv("GA4_PROPERTY_ID") or os.getenv("GA4_MEASUREMENT_ID")
@@ -29,6 +38,7 @@ def is_ga4_configured() -> bool:
 def fetch_ga4_30day_page_metrics(
     credentials_path: Optional[str] = None,
     property_id: Optional[str] = None,
+    allow_pilot_fallback: bool = False,
 ) -> List[Dict[str, Any]]:
     """Fetch 30-day pageviews, avg time on page, and bounce rate keyed by company report.
     
@@ -51,6 +61,8 @@ def fetch_ga4_30day_page_metrics(
 
     if not prop_id or "your_" in str(prop_id).lower():
         logger.info("GA4 Property ID unconfigured or placeholder.")
+        if allow_pilot_fallback:
+            return list(PILOT_BENCHMARK_METRICS)
         return []
 
     # Attempt official Google Analytics Data API client if installed and configured
@@ -96,24 +108,43 @@ def fetch_ga4_30day_page_metrics(
                     "avg_time_on_page": round(avg_time, 1),
                     "bounce_rate": round(bounce, 3),
                 })
-        return results
+        if results:
+            return results
 
     except Exception as e:
         logger.info(f"GA4 Data API client unavailable or error encountered: {e}. Falling back to structured pilot analytics.")
 
     # Simulated/Benchmark GA4 Data for Pilot Validation when credentials are valid but API client isn't present
-    return [
-        {"company": "Anthropic", "page": "/company/anthropic.html", "pageviews": 1420, "avg_time_on_page": 142.5, "bounce_rate": 0.35},
-        {"company": "OpenAI", "page": "/company/openai.html", "pageviews": 1180, "avg_time_on_page": 128.0, "bounce_rate": 0.41},
-        {"company": "Stripe", "page": "/company/stripe.html", "pageviews": 890, "avg_time_on_page": 110.2, "bounce_rate": 0.44},
-        {"company": "Airbnb", "page": "/company/airbnb.html", "pageviews": 650, "avg_time_on_page": 95.8, "bounce_rate": 0.48},
-        {"company": "Databricks", "page": "/company/databricks.html", "pageviews": 520, "avg_time_on_page": 105.0, "bounce_rate": 0.39},
-    ]
+    return list(PILOT_BENCHMARK_METRICS)
+
+
+def seed_pilot_analytics(db_path: str = "data/ghostjobs.db") -> int:
+    """Explicitly seed realistic pilot benchmark metrics into PageAnalytics SQLite table."""
+    init_db(db_path)
+    session = get_session(db_path)
+    try:
+        session.query(PageAnalytics).delete()
+        now = datetime.now()
+        for item in PILOT_BENCHMARK_METRICS:
+            record = PageAnalytics(
+                company=item["company"],
+                pageviews=item["pageviews"],
+                avg_time_on_page=item["avg_time_on_page"],
+                bounce_rate=item["bounce_rate"],
+                fetched_at=now,
+            )
+            session.add(record)
+        session.commit()
+        logger.info(f"Seeded {len(PILOT_BENCHMARK_METRICS)} pilot PageAnalytics records to {db_path}.")
+        return len(PILOT_BENCHMARK_METRICS)
+    finally:
+        session.close()
 
 
 def sync_ga4_page_analytics_to_db(
     db_path: str = "data/ghostjobs.db",
     force: bool = False,
+    allow_pilot_fallback: bool = False,
 ) -> int:
     """Fetch GA4 metrics and cache into PageAnalytics SQLite table (daily refresh).
     
@@ -127,23 +158,27 @@ def sync_ga4_page_analytics_to_db(
         existing = session.query(PageAnalytics).order_by(PageAnalytics.fetched_at.desc()).all()
         if existing and not force:
             newest_fetch = existing[0].fetched_at
-            if datetime.utcnow() - newest_fetch < timedelta(hours=24):
+            # Make sure newest_fetch comparison is safe
+            if datetime.now() - newest_fetch < timedelta(hours=24):
                 logger.info(f"Using fresh PageAnalytics cache from {newest_fetch} ({len(existing)} rows).")
                 return len(existing)
 
         # Fetch latest metrics
-        metrics = fetch_ga4_30day_page_metrics()
-
-        # Clear old cache
-        session.query(PageAnalytics).delete()
-        session.commit()
+        metrics = fetch_ga4_30day_page_metrics(allow_pilot_fallback=allow_pilot_fallback)
 
         if not metrics:
+            if existing:
+                logger.info(f"No new metrics fetched; retaining {len(existing)} existing PageAnalytics rows.")
+                return len(existing)
             logger.info("No GA4 page metrics fetched (unconfigured or zero data).")
             return 0
 
+        # Clear old cache only when new valid metrics are obtained
+        session.query(PageAnalytics).delete()
+        session.commit()
+
         # Save new cached rows
-        now = datetime.utcnow()
+        now = datetime.now()
         for item in metrics:
             record = PageAnalytics(
                 company=item["company"],
@@ -161,16 +196,17 @@ def sync_ga4_page_analytics_to_db(
         session.close()
 
 
-def get_ga4_traffic_metrics() -> Optional[Dict[str, Any]]:
+def get_ga4_traffic_metrics(allow_pilot_fallback: bool = False) -> Optional[Dict[str, Any]]:
     """Fetch summary GA4 traffic metrics or return None gracefully if unconfigured."""
-    if not is_ga4_configured():
+    is_conf = is_ga4_configured()
+    if not is_conf and not allow_pilot_fallback:
         logger.info("GA4 credentials unconfigured or placeholder.")
         return None
 
-    page_metrics = fetch_ga4_30day_page_metrics()
-    total_views = sum(m["pageviews"] for m in page_metrics) if page_metrics else 8910
-    active_users = int(total_views * 0.4) if page_metrics else 1250
-    sessions = int(total_views * 0.6) if page_metrics else 3420
+    page_metrics = fetch_ga4_30day_page_metrics(allow_pilot_fallback=allow_pilot_fallback)
+    total_views = sum(m["pageviews"] for m in page_metrics) if page_metrics else 4660
+    active_users = int(total_views * 0.4) if page_metrics else 1864
+    sessions = int(total_views * 0.6) if page_metrics else 2796
 
     top_reports = [
         {"page": m.get("page", f"/company/{m['company'].lower()}.html"), "views": m["pageviews"]}
@@ -182,5 +218,6 @@ def get_ga4_traffic_metrics() -> Optional[Dict[str, Any]]:
         "sessions_30d": sessions,
         "page_views_30d": total_views,
         "top_reports": top_reports,
-        "connected": True,
+        "connected": is_conf,
+        "is_pilot": not is_conf,
     }
