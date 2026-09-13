@@ -6,9 +6,9 @@ This report synthesizes dataset metrics, model performance, and validation corre
 
 | Metric | Empirical Value | Description |
 | :--- | :---: | :--- |
-| **Total Job Postings ($N$)** | `3` | Scraped job descriptions across corporate career portals and indices |
-| **Total Community Reviews ($M$)** | `3` | Reddit / Glassdoor community feedback records |
-| **Target Companies Covered** | `2` | Distinct corporate entities evaluated in dataset |
+| **Total Job Postings ($N$)** | `160` | Scraped job descriptions across corporate career portals and indices |
+| **Total Community Reviews ($M$)** | `16` | Reddit / Glassdoor community feedback records |
+| **Target Companies Covered** | `5` | Distinct corporate entities evaluated in dataset |
 
 ## 2. Ghost Job Score Statistical Distribution
 
@@ -16,13 +16,13 @@ Statistical properties of composite Ghost Job Scores ($0 - 100$ scale) across ev
 
 | Statistic | Value |
 | :--- | :---: |
-| **Mean Score ($\mu$)** | `5.60` |
-| **Standard Deviation ($\sigma$)** | `2.88` |
-| **Minimum Score** | `3.56` |
-| **25th Percentile ($Q_1$)** | `3.56` |
-| **Median Score ($Q_2$)** | `3.56` |
-| **75th Percentile ($Q_3$)** | `6.62` |
-| **Maximum Score** | `9.68` |
+| **Mean Score ($\mu$)** | `5.86` |
+| **Standard Deviation ($\sigma$)** | `5.62` |
+| **Minimum Score** | `1.05` |
+| **25th Percentile ($Q_1$)** | `2.96` |
+| **Median Score ($Q_2$)** | `3.89` |
+| **75th Percentile ($Q_3$)** | `5.79` |
+| **Maximum Score** | `24.56` |
 | **High-Risk Postings ($\ge 60.0$)** | `0` |
 
 ## 3. Classifier Performance Metrics
@@ -40,5 +40,5 @@ Performance evaluation of the fine-tuned BERT ghost-signal classifier against ha
 
 | Validation Signal | Pearson $r$ | $p$-value | Interpretation |
 | :--- | :---: | :---: | :--- |
-| **Candidate Sentiment vs. Ghost Score** | `0.8412` | `0.0010` | Strong positive correlation validating internal model against community frustration |
-| **GA4 Web Traffic vs. Ghost Score** | `-0.9647` | `0.0079` | Inverse engagement trend pilot validation |
+| **Candidate Sentiment vs. Ghost Score** | `0.9942` | `0.0005` | Strong positive correlation validating internal model against community frustration |
+| **GA4 Web Traffic vs. Ghost Score** | `-0.7870` | `0.1141` | Inverse engagement trend pilot validation |
