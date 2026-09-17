@@ -5,6 +5,7 @@ env/
 
 # Database Files
 data/*.db
+!data/ghostjobs.db
 *.sqlite3
 
 # Data directory contents (keep directory structure via .gitkeep)

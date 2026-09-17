@@ -284,13 +284,104 @@ def load_company_industries(config_path: str = "config/target_companies.yaml") -
     return mapping
 
 
-def load_dashboard_data(db_path: str = "data/ghostjobs.db"):
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DEFAULT_DB_PATH = os.path.join(PROJECT_ROOT, "data", "ghostjobs.db")
+SNAPSHOT_PATH = os.path.join(PROJECT_ROOT, "data", "benchmark_snapshot.json")
+
+
+def seed_from_snapshot(db_path: str = DEFAULT_DB_PATH, snapshot_path: str = SNAPSHOT_PATH) -> bool:
+    """Restore database from benchmark_snapshot.json if DB is empty (automatic self-healing for cloud deployment)."""
+    if not os.path.exists(snapshot_path):
+        return False
+
+    import json
+    try:
+        with open(snapshot_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        init_db(db_path)
+        session = get_session(db_path)
+        try:
+            if session.query(JobPosting).count() == 0 and "job_postings" in data:
+                for p in data["job_postings"]:
+                    posting = JobPosting(
+                        id=p.get("id"),
+                        company=p.get("company"),
+                        title=p.get("title"),
+                        description=p.get("description"),
+                        url=p.get("url"),
+                        source=p.get("source"),
+                        salary_listed=p.get("salary_listed"),
+                        cleaned_text=p.get("cleaned_text"),
+                        repost_of_id=p.get("repost_of_id"),
+                    )
+                    session.add(posting)
+                session.commit()
+
+                for s in data.get("ghost_scores", []):
+                    score = GhostScore(
+                        id=s.get("id"),
+                        job_posting_id=s.get("job_posting_id"),
+                        genericness_score=s.get("genericness_score"),
+                        vagueness_score=s.get("vagueness_score"),
+                        repost_score=s.get("repost_score"),
+                        urgency_score=s.get("urgency_score"),
+                        bert_score=s.get("bert_score"),
+                        sentiment_score=s.get("sentiment_score"),
+                        final_score=s.get("final_score"),
+                    )
+                    session.add(score)
+
+                for r in data.get("company_reviews", []):
+                    review = CompanyReview(
+                        id=r.get("id"),
+                        company=r.get("company"),
+                        source=r.get("source"),
+                        text=r.get("text"),
+                    )
+                    session.add(review)
+
+                for cs in data.get("company_sentiments", []):
+                    sentiment = CompanySentiment(
+                        id=cs.get("id"),
+                        company=cs.get("company"),
+                        score=cs.get("score"),
+                        review_count=cs.get("review_count", 0),
+                    )
+                    session.add(sentiment)
+
+                for pa in data.get("page_analytics", []):
+                    analytics = PageAnalytics(
+                        id=pa.get("id"),
+                        company=pa.get("company"),
+                        pageviews=pa.get("pageviews"),
+                        avg_time_on_page=pa.get("avg_time_on_page"),
+                        bounce_rate=pa.get("bounce_rate"),
+                    )
+                    session.add(analytics)
+
+                session.commit()
+                return True
+        finally:
+            session.close()
+    except Exception as e:
+        print(f"Error seeding from snapshot: {e}")
+    return False
+
+
+def load_dashboard_data(db_path: str = DEFAULT_DB_PATH):
     """Load live data from SQLite database into pandas DataFrames."""
     if not os.path.exists(db_path):
         init_db(db_path)
 
     session = get_session(db_path)
     try:
+        # Check if database is empty; if so, automatically restore from benchmark snapshot
+        if session.query(JobPosting).count() == 0:
+            session.close()
+            seed_from_snapshot(db_path=db_path)
+            session = get_session(db_path)
+
         query = (
             session.query(JobPosting, GhostScore)
             .join(GhostScore, JobPosting.id == GhostScore.job_posting_id)
@@ -352,7 +443,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    db_path = "data/ghostjobs.db"
+    db_path = DEFAULT_DB_PATH
     sync_ga4_page_analytics_to_db(db_path=db_path, allow_pilot_fallback=True)
     df_postings, df_sentiments, df_analytics = load_dashboard_data(db_path=db_path)
     industry_mapping = load_company_industries()
@@ -375,7 +466,10 @@ def main():
         st.header("Overview & Ghost Job Score Distribution")
 
         if df_postings.empty:
-            st.warning("No scored job postings found in the database. Run `python scoring/run.py` to populate scores.")
+            st.warning("No scored job postings found in the database.")
+            if st.button("Load Benchmark Dataset (160 Postings & Reviews)"):
+                seed_from_snapshot(db_path=db_path)
+                st.rerun()
         else:
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Total Postings Analyzed", len(df_postings))
