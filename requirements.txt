@@ -15,3 +15,4 @@ sqlalchemy
 python-dotenv
 pytest
 matplotlib
+google-analytics-data

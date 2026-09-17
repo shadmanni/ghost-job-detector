@@ -24,12 +24,25 @@ PILOT_BENCHMARK_METRICS: List[Dict[str, Any]] = [
 ]
 
 
+def _get_config_value(key: str) -> Optional[str]:
+    """Retrieve config value from env vars or Streamlit secrets."""
+    val = os.getenv(key)
+    if val and "your_" not in val.lower():
+        return val
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets:
+            s_val = str(st.secrets[key])
+            if s_val and "your_" not in s_val.lower():
+                return s_val
+    except Exception:
+        pass
+    return None
+
+
 def is_ga4_configured() -> bool:
     """Check if GA4 credentials / IDs are set and non-placeholder."""
-    property_id = os.getenv("GA4_PROPERTY_ID") or os.getenv("GA4_MEASUREMENT_ID")
-    api_secret = os.getenv("GA4_API_SECRET")
-    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
+    property_id = _get_config_value("GA4_PROPERTY_ID") or _get_config_value("GA4_MEASUREMENT_ID")
     if not property_id or "your_" in property_id.lower():
         return False
     return True
@@ -56,8 +69,8 @@ def fetch_ga4_30day_page_metrics(
     Gracefully handles missing credentials or zero data by returning an empty list
     or pilot benchmark data if configured.
     """
-    prop_id = property_id or os.getenv("GA4_PROPERTY_ID") or os.getenv("GA4_MEASUREMENT_ID")
-    creds = credentials_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    prop_id = property_id or _get_config_value("GA4_PROPERTY_ID") or _get_config_value("GA4_MEASUREMENT_ID")
+    creds = credentials_path or _get_config_value("GOOGLE_APPLICATION_CREDENTIALS")
 
     if not prop_id or "your_" in str(prop_id).lower():
         logger.info("GA4 Property ID unconfigured or placeholder.")
@@ -75,13 +88,24 @@ def fetch_ga4_30day_page_metrics(
             RunReportRequest,
         )
 
+        service_account_info = None
+        try:
+            import streamlit as st
+            if hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
+                service_account_info = dict(st.secrets["gcp_service_account"])
+        except Exception:
+            pass
+
         if creds and os.path.exists(creds):
             client = BetaAnalyticsDataClient.from_service_account_json(creds)
+        elif service_account_info:
+            client = BetaAnalyticsDataClient.from_service_account_info(service_account_info)
         else:
             client = BetaAnalyticsDataClient()
 
+        clean_prop_id = str(prop_id).strip().replace("properties/", "")
         request = RunReportRequest(
-            property=f"properties/{prop_id}",
+            property=f"properties/{clean_prop_id}",
             dimensions=[Dimension(name="pagePath")],
             metrics=[
                 Metric(name="screenPageViews"),
