@@ -199,6 +199,13 @@ st.markdown(
 
 # Live GA4 telemetry tracking tag
 ga4_meas_id = os.getenv("GA4_MEASUREMENT_ID")
+if not ga4_meas_id:
+    try:
+        if hasattr(st, "secrets") and "GA4_MEASUREMENT_ID" in st.secrets:
+            ga4_meas_id = str(st.secrets["GA4_MEASUREMENT_ID"])
+    except Exception:
+        pass
+
 if ga4_meas_id and "your_" not in ga4_meas_id.lower():
     st.components.v1.html(
         f"""
