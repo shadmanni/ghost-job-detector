@@ -206,7 +206,10 @@ if not ga4_meas_id:
     except Exception:
         pass
 
-if ga4_meas_id and "your_" not in ga4_meas_id.lower():
+if not ga4_meas_id or "your_" in ga4_meas_id.lower():
+    ga4_meas_id = "G-90J1MLTLJM"
+
+if ga4_meas_id:
     st.components.v1.html(
         f"""
         <script>
