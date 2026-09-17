@@ -595,10 +595,6 @@ def main():
     # =========================================================================
     with tab4:
         st.header("GA4 Public Transparency Telemetry")
-        st.markdown(
-            "Empirical validation layer tracking real-world candidate search traffic to public hiring transparency scorecards. "
-            "Correlates external visitor interest with internal composite ghost job risk scores (IEEE Study Stage 7)."
-        )
 
         is_live = is_ga4_configured()
 
@@ -741,57 +737,6 @@ def main():
             file_name="ga4_transparency_telemetry.csv",
             mime="text/csv",
         )
-
-        st.divider()
-
-        # 5. Live GA4 Connection & Setup Guide (Expander)
-        with st.expander("Connect Live Google Analytics 4 (Setup Guide and Configuration)", expanded=False):
-            st.markdown("""
-            ### How to Connect Real Google Analytics 4 (GA4)
-            Follow these steps to link your live tracking:
-
-            #### Step 1: Create a GA4 Property
-            1. Go to Google Analytics and create a GA4 Property.
-            2. Add a Web Data Stream and copy your Measurement ID (format: `G-XXXXXXXXXX`).
-
-            #### Step 2: Configure Environment Variables
-            Open `.env` in the project root and update:
-            ```env
-            GA4_MEASUREMENT_ID=G-XXXXXXXXXX
-            GA4_PROPERTY_ID=123456789
-            ```
-            *(Optional for direct API sync)* Set `GOOGLE_APPLICATION_CREDENTIALS=path/to/service_account.json`.
-
-            #### Step 3: Bake Tracking into Static SEO Pages
-            Run the static transparency generator:
-            ```bash
-            python seo/build.py --threshold 60
-            ```
-            This automatically injects the `gtag.js` tracking snippet into every generated HTML page in `seo/build/`.
-
-            #### Step 4: Deploy Static Site to GitHub Pages
-            1. Push changes to GitHub.
-            2. Go to Repo Settings -> Pages -> Source: Deploy from branch (`main` / `seo/build`).
-            3. As candidates search and visit `https://<username>.github.io/ghost-job-detector/`, GA4 will automatically record telemetry.
-            """)
-
-            st.markdown("#### Test In-Memory Connection")
-            test_col1, test_col2 = st.columns(2)
-            with test_col1:
-                input_meas_id = st.text_input("GA4 Measurement ID", value=os.getenv("GA4_MEASUREMENT_ID", ""))
-            with test_col2:
-                input_prop_id = st.text_input("GA4 Property ID", value=os.getenv("GA4_PROPERTY_ID", ""))
-
-            if st.button("Test and Save Live GA4 Connection"):
-                if input_meas_id and "your_" not in input_meas_id.lower():
-                    os.environ["GA4_MEASUREMENT_ID"] = input_meas_id
-                    if input_prop_id:
-                        os.environ["GA4_PROPERTY_ID"] = input_prop_id
-                    new_count = sync_ga4_page_analytics_to_db(db_path=db_path, force=True, allow_pilot_fallback=False)
-                    st.success(f"Connection test complete! Synced {new_count} metrics.")
-                    st.rerun()
-                else:
-                    st.error("Please enter a valid GA4 Measurement ID (format: G-XXXXXXXXXX).")
 
 
 if __name__ == "__main__":
