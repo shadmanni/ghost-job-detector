@@ -28,6 +28,8 @@ class JobPosting(Base):
     posted_date = Column(DateTime, nullable=True)
     scraped_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     salary_listed = Column(String(255), nullable=True)
+    location = Column(String(255), nullable=True)
+    content_hash = Column(String(64), nullable=True, index=True)
     cleaned_text = Column(Text, nullable=True)
     repost_of_id = Column(Integer, ForeignKey("job_postings.id"), nullable=True)
 
@@ -120,10 +122,14 @@ def init_db(db_path: str = "data/ghostjobs.db"):
     inspector = inspect(engine)
     if "job_postings" in inspector.get_table_names():
         columns = [c["name"] for c in inspector.get_columns("job_postings")]
-        if "cleaned_text" not in columns:
-            with engine.connect() as conn:
+        with engine.connect() as conn:
+            if "cleaned_text" not in columns:
                 conn.execute(text("ALTER TABLE job_postings ADD COLUMN cleaned_text TEXT"))
-                conn.commit()
+            if "location" not in columns:
+                conn.execute(text("ALTER TABLE job_postings ADD COLUMN location TEXT"))
+            if "content_hash" not in columns:
+                conn.execute(text("ALTER TABLE job_postings ADD COLUMN content_hash VARCHAR(64)"))
+            conn.commit()
 
     return engine
 

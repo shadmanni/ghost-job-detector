@@ -40,6 +40,70 @@ def _get_config_value(key: str) -> Optional[str]:
     return None
 
 
+_TELEMETRY_EVENT_BUFFER: List[Dict[str, Any]] = []
+
+
+def get_ga4_measurement_id() -> Optional[str]:
+    """Retrieve verified active GA4 Measurement ID."""
+    mid = _get_config_value("GA4_MEASUREMENT_ID")
+    if mid and "your_" not in mid.lower():
+        return mid
+    return None
+
+
+def send_ga4_measurement_event(
+    event_name: str,
+    params: Optional[Dict[str, Any]] = None,
+    client_id: str = "ghost-app-client-1",
+) -> bool:
+    """Send a custom event to GA4 via Measurement Protocol if API secret is available,
+    and register the event in the local telemetry buffer for live dashboard inspection.
+    """
+    global _TELEMETRY_EVENT_BUFFER
+    if params is None:
+        params = {}
+
+    measurement_id = get_ga4_measurement_id()
+    api_secret = _get_config_value("GA4_API_SECRET")
+
+    event_record = {
+        "event_name": event_name,
+        "params": params,
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "measurement_id": measurement_id or "Not Configured",
+        "dispatched": False,
+    }
+
+    if measurement_id and api_secret and "your_" not in api_secret.lower():
+        try:
+            import requests
+
+            url = f"https://www.google-analytics.com/mp/collect?measurement_id={measurement_id}&api_secret={api_secret}"
+            payload = {
+                "client_id": client_id,
+                "events": [{"name": event_name, "params": params}],
+            }
+            resp = requests.post(url, json=payload, timeout=4)
+            if resp.status_code in [200, 204]:
+                event_record["dispatched"] = True
+                logger.info(f"Dispatched GA4 event '{event_name}' via Measurement Protocol.")
+            else:
+                logger.warning(f"GA4 Measurement Protocol returned HTTP {resp.status_code}")
+        except Exception as e:
+            logger.debug(f"Could not dispatch GA4 event '{event_name}': {e}")
+
+    _TELEMETRY_EVENT_BUFFER.insert(0, event_record)
+    if len(_TELEMETRY_EVENT_BUFFER) > 50:
+        _TELEMETRY_EVENT_BUFFER = _TELEMETRY_EVENT_BUFFER[:50]
+
+    return True
+
+
+def get_recent_telemetry_events() -> List[Dict[str, Any]]:
+    """Return recent telemetry events registered during the current active session."""
+    return list(_TELEMETRY_EVENT_BUFFER)
+
+
 def is_ga4_configured() -> bool:
     """Check if GA4 credentials / IDs are set and non-placeholder."""
     property_id = _get_config_value("GA4_PROPERTY_ID") or _get_config_value("GA4_MEASUREMENT_ID")
